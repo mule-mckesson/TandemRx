@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+	<db:config name="Database_Config" doc:name="Database Config" doc:id="c486643e-7a5e-4403-a030-f8147699352a" >
+		<db:mssql-connection host="0.0.0.0" port="1433" user="mule" password="S!@#123ita" databaseName="xDManagement" />
+	</db:config>
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="4135c52f-7768-4572-983a-2c049f274b7e" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<flow name="test-db-connectionFlow" doc:id="109c6647-6b01-4abc-9a7f-ea4960547656" >
+		<http:listener doc:name="Listener" doc:id="a7b770ca-1613-4511-a05e-2f401fea8e9e" config-ref="HTTP_Listener_config" path="/checkPriceMoniter/storeId/{0}"/>
+		<set-variable value="#[attributes.uriParams[0]]" doc:name="Set Variable" doc:id="cd161de6-270a-4e14-b9d1-63ebc0687d61" variableName="locationId"/>
+		<db:select doc:name="Select" doc:id="899d87dc-dbf3-4bdc-8137-7e2fd701035f" config-ref="Database_Config">
+			<db:sql ><![CDATA[select * from [dbo].[price_monitor]]]></db:sql>
+		</db:select>
+		<ee:transform doc:name="Transform Message" doc:id="7481d4c5-4ede-4c7f-9c11-41d2c0cc3496" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="61707575-e1b2-4518-bb46-3f3f127b578d" message="#[payload]" />
+		<db:stored-procedure doc:name="Stored procedure" doc:id="d5f746e3-4a2e-4685-8217-7680374756ec" config-ref="Database_Config">
+			<db:sql><![CDATA[{ call GetPriceMonitor (:locId) }]]></db:sql>
+			<db:input-parameters ><![CDATA[#[%dw 2.0
+output application/java
+---
+{
+locId: vars.locationId
+}]]]></db:input-parameters>
+			<db:in-out-parameters>
+				<db:in-out-parameter key="locId" value="#[vars.locationId]" />
+			</db:in-out-parameters>
+		</db:stored-procedure>
+		<!-- test-->
+		<!-- end -->
+		<ee:transform doc:name="Transform Message" doc:id="0a8f6999-4dad-47e7-9439-b9f09f82d6af" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="588a702e-3e48-4d01-8944-26434eda6b8c" message="#[payload]"/>
+	</flow>
+</mule>
